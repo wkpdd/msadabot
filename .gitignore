@@ -1,0 +1,28 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+yarn.lock
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE and Editor specific
+.vscode/
+.idea/
+*.sublime-*
+*.swp
+*.swo
+*.bak
+*.tmp
+*.log
+
+# Environment specific
+.env
+.env.local
+.env.*.local
+.env.*.local.*
+*.db
