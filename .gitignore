@@ -26,5 +26,5 @@ __pycache__/
 .env.*.local
 .env.*.local.*
 *.db
-
+*.zip
 *.csv

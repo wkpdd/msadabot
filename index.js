@@ -385,7 +385,7 @@ const submit_answer = async (ctx) => {
 
 
 const leaderboard = (ctx) => {
-    sql = "SELECT * FROM users ORDER BY long DESC, medium DESC, short DESC LIMIT 10;"
+    sql = "SELECT * FROM users ORDER BY long DESC, medium DESC, short DESC;"
     db.all(sql,(err,res)=>{
         console.log(res);
         str = `----`
