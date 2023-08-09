@@ -11,7 +11,8 @@ require('dotenv').config();
 const { Telegraf } = require('telegraf');
 const { type } = require("os");
 const { cursorTo } = require("readline");
-const { log } = require("console");
+const { log, table } = require("console");
+const { brotliDecompress } = require("zlib");
 
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
@@ -75,46 +76,107 @@ const createDb = () => {
 
 }
 
-const checkIfUserExist = (id) => {
+const checkIfUserExist = (id, data) => {
     sql = `SELECT * FROM users WHERE id=?`
-
+    var res;
     db.get(sql, [id], (err, row) => {
         if (err) {
             console.log(err);
         }
+        table(`${row} =+++++++++ >>>>>>> ROW`)
+        if (row == undefined) {
+            sql = `INSERT INTO users 
+        VALUES (?, ?, ?, ?, ?, ?,?,?);`
 
-        row ? console.log("exist") : console.log("new_user");
-        return row
-    })
-}
-
-const saveUser = (data) => {
-    sql = `INSERT INTO users 
-    VALUES (?, ?, ?, ?, ?);`
-
-    db.run(sql, [data.id, data.first_name, data.last_name, data.username, data.is_bot], (res, err) => {
-        if (err) {
-            console.log(err);
+            db.run(sql, [data.id, data.first_name, data.last_name, data.username, data.is_bot,0,0,0], (res, err) => {
+                if (err) {
+                    console.log(err);
+                }
+                console.log(res);
+            })
         }
-        console.log(res);
     })
-
-    
+    return res;
 }
+
+
 
 
 const addUser = (data) => {
     const { first_name, last_name, username, id, is_bot } = data
     console.log(first_name, last_name, username, id, is_bot);
-    if (checkIfUserExist(id))
-        saveUser(data)
+    checkIfUserExist(id, data)
 
 }
+
+
+const doaas = [
+    'ربِّ اغفِرْ لي خطيئتي يومَ الدِّينَ', 'اللَّهُمَّ إنِّي أَسْأَلُكَ الهُدَى وَالتُّقَى، وَالْعَفَافَ وَالْغِنَى',
+    'اللَّهُمَّ اهْدِنِي وَسَدِّدْنِ',
+    'للَّهُمَّ آتِنَا في الدُّنْيَا حَسَنَةً وفي الآخِرَةِ حَسَنَةً، وَقِنَا عَذَابَ النَّارِ',
+    'اللَّهُمَّ إنِّي أَعُوذُ بكَ مِن زَوَالِ نِعْمَتِكَ، وَتَحَوُّلِ عَافِيَتِكَ، وَفُجَاءَةِ نِقْمَتِكَ، وَجَمِيعِ سَخَطِكَ',
+    'اللَّهمَّ إنِّي أعوذُ بِك من شرِّ ما عَمِلتُ، ومن شرِّ ما لم أعمَلْ',
+    'اللهم إني أعوذُ بكَ منَ الهمِّ والحزَنِ، وأعوذُ بكَ منَ العجزِ والكسلِ، وأعوذُ بكَ منَ الجُبنِ والبخلِ، وأعوذُ بكَ مِن غلبةِ الدَّينِ وقهرِ الرجالِ',
+    'اللَّهُمَّ اغْفِرْ لي وَارْحَمْنِي وَاهْدِنِي وَارْزُقْنِي',
+    'اللَّهُمَّ مثبت القُلُوبِ ثبت قُلُوبَنَا علَى طَاعَتِكَ',
+    'اللهم انفَعْني بما علَّمتَني وعلِّمْني ما ينفَعُني وزِدْني عِلمًا',
+    'اللَّهُمَّ إنِّي ظَلَمْتُ نَفْسِي ظُلْمًا كَثِيرًا، ولَا يَغْفِرُ الذُّنُوبَ إلَّا أنْتَ، فَاغْفِرْ لي مِن عِندِكَ مَغْفِرَةً إنَّكَ أنْتَ الغَفُورُ الرَّحِيمُ',
+    'اللهمَّ إنَّي أعوذُ بك من شرِّ سمْعي، ومن شرِّ بصري، ومن شرِّ لساني، ومن شرِّ قلْبي، ومن شرِّ منيَّتي',
+    'اللَّهمَّ إني أعوذُ بكَ من مُنكراتِ الأخلاقِ والأعمالِ والأَهواءِ والأدواءِ',
+    'رَّبِّ اغْفِرْ لِي وَلِوَالِدَيَّ',
+    'رَبِّ ارحَمهُما كَما رَبَّياني صَغيرًا',
+    'رَبِّ أَوْزِعْنِي أَنْ أَشْكُرَ نِعْمَتَكَ الَّتِي أَنْعَمْتَ عَلَيَّ وَعَلَى وَالِدَيَّ وَأَنْ أَعْمَلَ صَالِحًا تَرْضَاهُ وَأَدْخِلْنِي بِرَحْمَتِكَ فِي عِبَادِكَ الصَّالِحِينَ',
+    'رَبَّنَا لاَ تُؤَاخِذْنَا إِن نَّسِينَا أَوْ أَخْطَأْنَا رَبَّنَا وَلاَ تَحْمِلْ عَلَيْنَا إِصْرًا كَمَا حَمَلْتَهُ عَلَى الَّذِينَ مِن قَبْلِنَا رَبَّنَا وَلاَ تُحَمِّلْنَا مَا لاَ طَاقَةَ لَنَا بِهِ وَاعْفُ عَنَّا وَاغْفِرْ لَنَا وَارْحَمْنَا أَنتَ مَوْلاَنَا فَانصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ',
+    'أَصْلِحْ لِي فِي ذُرِّيَّتِي إِنِّي تُبْتُ إِلَيْكَ وَإِنِّي مِنَ الْمُسْلِمِينَ',
+    'رَبَّنَا اغْفِرْ لِي وَلِوَالِدَيَّ وَلِلْمُؤْمِنِينَ يَوْمَ يَقُومُ الْحِسَابُ',
+    
+    'شُكْرًا كَبِيرًا',
+    'تَسْلَمْ',
+    'مُتَشَكِّر',
+    'لَكَ الشُّكْرُ',
+    'شُكْرًا لِلْمُسَاعَدَةِ',
+    'اللَّهِ يَخْلِيك',
+    'الله يرزقك',
+    'الله يوفقك',
+    'شكرًا وبارك الله فيك',
+    'يعطيك العافية',
+    'يسلمو إيديك',
+    'جزيل الشكر والامتنان'
+]
 
 
 
 bot.command("start", ctx => {
     addUser(ctx.from)
+    ctx.reply(`
+    مرحبًا بك في بوت جمع البيانات باللهجة الجزائرية!
+    هذا البوت مصمم لجمع بيانات من الجمل باللهجة الجزائرية. ستتمكن من اختيار طول الجملة ومن ثم الحصول على مثال لها، وبعد ذلك ستقوم بكتابة الجملة باللهجة الجزائرية.
+
+    الخطوات:
+   
+    1. اختر طول الجملة التي تريد: قصيرة، متوسطة، أو طويلة.
+    2. قم بترجمة الجملة إلى اللهجة الجزائرية وأرسلها للبوت.
+    
+    مثال:
+    الجملة:
+    كيف حالهم؟
+    الترجمة:
+    كيفاش راهم؟
+
+    يرجى ملاحظة أن البيانات التي تقدمها ستكون مساهمة في تحسين البوت. شكرًا لمساهمتك!
+    
+    `, {
+        reply_markup: {
+
+            inline_keyboard: [
+
+                [
+                    { text: 'إضغط هنا للبدأ ', callback_data: 'submit_answer_with_one_more', },
+
+                ],
+            ],
+        },
+    })
 })
 
 
@@ -133,8 +195,23 @@ app.get("/initDatabase", (req, res) => {
 
 
 
+app.get("/stopBot", (req, res) => {
+    bot.stop();
+    res.sendStatus(200)
+})
+
+
+app.get("/startBot", (req, res) => {
+    bot.launch();
+    res.sendStatus(200)
+})
+
+
+
+
 app.listen(3000, () => {
     console.log("Listening on 3000");
+    log(doaas.length)
 })
 
 
@@ -143,30 +220,31 @@ const currentTranslations = {}
 
 
 const getNumberOfTranslatedSentences = (ctx, id) => {
-    sql = "SELECT length FROM sentence_translation where user_id=?"
+    sql = "SELECT short,medium,long FROM users where id=?"
 
-    db.all(sql, [id], (err, rows) => {
-        let s = 0
-        let m = 0
-        let l = 0
-        if (rows != null)
-            log(rows, rows.length)
-        for (let i = 0; i < rows.length; i++) {
+    db.get(sql, [id], (err, rows) => {
+        // let s = 0
+        // let m = 0
+        // let l = 0
+        // if (rows != null)
+        //     log(rows, rows.length)
+        // for (let i = 0; i < rows.length; i++) {
 
-            if (rows[i].length == "short") s++
-            if (rows[i].length == "medium") m++
-            if (rows[i].length == "long") l++
-        }
-        ctx.reply('Please Select the length you prefer', {
+        //     if (rows[i].length == "short") s++
+        //     if (rows[i].length == "medium") m++
+        //     if (rows[i].length == "long") l++
+        // }
+        
+        ctx.reply('الرجاء اختيار طول الجملة الذي تفضله', {
             // Create an inline keyboard with choices
             reply_markup: {
 
                 inline_keyboard: [
 
                     [
-                        { text: 'Short ' + s, callback_data: 't_short', },
-                        { text: 'Medium ' + m, callback_data: 't_medium' },
-                        { text: 'Long ' + l, callback_data: 't_long' },
+                        { text: 'قصيرة ' , callback_data: 't_short', },
+                        { text: 'متوسطة ' , callback_data: 't_medium' },
+                        { text: 'طويلة ' , callback_data: 't_long' },
                     ],
                 ],
             },
@@ -185,12 +263,10 @@ const t_short = async (ctx) => {
     db.get(sql, (err, row) => {
         log(row.sentence_text)
         sentence_text = row.sentence_text
-        sentence_text = sentence_text.replace("!","")
         currentTranslations[ctx.chat.id] = {
             type: "short",
             sentence_text: sentence_text,
             sentence_id: row.id,
-
         }
         console.log(currentTranslations);
         ctx.reply(sentence_text)
@@ -206,12 +282,10 @@ const t_medium = async (ctx) => {
     db.get(sql, (err, row) => {
         log(row.sentence_text)
         sentence_text = row.sentence_text
-        sentence_text = sentence_text.replace("!","")
         currentTranslations[ctx.chat.id] = {
             type: "medium",
             sentence_text: sentence_text,
             sentence_id: row.id,
-
         }
         console.log(currentTranslations);
         ctx.reply(sentence_text)
@@ -227,13 +301,10 @@ const t_long = async (ctx) => {
     db.get(sql, (err, row) => {
         log(row.sentence_text)
         sentence_text = row.sentence_text
-        sentence_text = sentence_text.replace("!","")
         currentTranslations[ctx.chat.id] = {
             type: "long",
             sentence_text: sentence_text,
             sentence_id: row.id,
-    
-
         }
         console.log(currentTranslations);
         ctx.reply(sentence_text)
@@ -242,12 +313,15 @@ const t_long = async (ctx) => {
 // of sentence that you want to translate
 // example: .... 
 
+
+
+
 const submit_answer = async (ctx) => {
-    if(currentTranslations[ctx.chat.id] == null) return;
+    if (currentTranslations[ctx.chat.id] == null) return;
     console.log(currentTranslations[ctx.chat.id]);
     sql = `INSERT INTO sentence_translation (sentence_id, user_id, dialect_translation, length) VALUES (?,?,?,?);`
-    
-    db.run(sql, [currentTranslations[ctx.chat.id].sentence_id, ctx.chat.id, currentTranslations[ctx.chat.id].sentence_translation, currentTranslations[ctx.chat.id].type ], (res, err)=>{
+
+    db.run(sql, [currentTranslations[ctx.chat.id].sentence_id, ctx.chat.id, currentTranslations[ctx.chat.id].sentence_translation, currentTranslations[ctx.chat.id].type], (res, err) => {
 
     })
 
@@ -255,13 +329,77 @@ const submit_answer = async (ctx) => {
     SET is_processed = 1
     WHERE id = ?;`
 
-    db.run(sql, [currentTranslations[ctx.chat.id].sentence_id], (res,error)=>{
+
+    db.run(sql, [currentTranslations[ctx.chat.id].sentence_id], (res, error) => {
 
     })
+
+     sql1 = "";
+
+    switch (currentTranslations[ctx.chat.id].type) {
+        case "short":
+            sql1 = `UPDATE users
+            SET short = short + 1
+            WHERE id = ?;` 
+            break;
+            case "medium":
+            sql1 = `UPDATE users
+            SET medium = medium + 1
+            WHERE id = ?;` 
+            break;
+            case "long":
+            sql1 = `UPDATE users
+            SET long = long + 1
+            WHERE id = ?;` 
+            break;
+    
+        default:
+            break;
+    }
+
+
+    db.run(sql1, [ctx.chat.id], (res,err)=>{
+        if(err) log(err)
+    })
+
     currentTranslations[ctx.chat.id] = null
-    ctx.reply("الله بجازيك خير")
+
+
+    ctx.reply(doaas[Math.floor(Math.random() * 31)] + "\n جزاك الله خيرا", {
+        reply_markup: {
+
+            inline_keyboard: [
+
+                [
+                    { text: 'أضف جملة أخرى  ', callback_data: 'submit_answer_with_one_more', },
+                ]
+
+                ,
+                [
+                    { text: 'قائمة  أكثر عشر أشخاص قامو بالترجمة ', callback_data: 'leaderboard', },
+                ]
+            ],
+        },
+    })
 }
 
+
+const leaderboard = (ctx) => {
+    sql = "SELECT * FROM users ORDER BY long DESC, medium DESC, short DESC LIMIT 10;"
+    db.all(sql,(err,res)=>{
+        console.log(res);
+        str = `----`
+        for(var i = 0 ; i < res.length ; i++)
+            str += `${res[i].first_name} || s:  ${res[i].short} || m: ${res[i].medium}  || l: ${res[i].long} \n ==== \n`
+        
+        ctx.reply(str)
+    
+        })
+}
+
+bot.command("leaderboard", (ctx)=>{
+    leaderboard(ctx)
+})
 
 bot.command('translate', (ctx) => {
 
@@ -271,35 +409,36 @@ bot.command('translate', (ctx) => {
 
 });
 
-const submit_answer_with_one_more = async (ctx) => { 
+const submit_answer_with_one_more = async (ctx) => {
 
-    if(currentTranslations[ctx.chat.id] != null)
-    submit_answer(ctx)
+    if (currentTranslations[ctx.chat.id] != null)
+        submit_answer(ctx)
 
-    sql = "SELECT length FROM sentence_translation where user_id=?"
+    sql = "SELECT short,medium,long FROM users where id=?"
 
-    db.all(sql, [ctx.chat.id], (err, rows) => {
-        let s = 0
-        let m = 0
-        let l = 0
-        if (rows != null)
-            log(rows, rows.length)
-        for (let i = 0; i < rows.length; i++) {
+    db.get(sql, [ctx.chat.id], (err, rows) => {
+        // let s = 0
+        // let m = 0
+        // let l = 0
+        // if (rows != null)
+        //     log(rows, rows.length)
+        // for (let i = 0; i < rows.length; i++) {
 
-            if (rows[i].length == "short") s++
-            if (rows[i].length == "medium") m++
-            if (rows[i].length == "long") l++
-        }
-        ctx.reply('Please Select the length you prefer', {
+        //     if (rows[i].length == "short") s++
+        //     if (rows[i].length == "medium") m++
+        //     if (rows[i].length == "long") l++
+        // }
+        log(rows)
+        ctx.reply('الرجاء اختيار طول الجملة الذي تفضله', {
             // Create an inline keyboard with choices
             reply_markup: {
 
                 inline_keyboard: [
 
                     [
-                        { text: 'Short ' + s, callback_data: 't_short', },
-                        { text: 'Medium ' + m, callback_data: 't_medium' },
-                        { text: 'Long ' + l, callback_data: 't_long' },
+                        { text: 'قصيرة ' , callback_data: 't_short', },
+                        { text: 'متوسطة ' , callback_data: 't_medium' },
+                        { text: 'طويلة ' , callback_data: 't_long' },
                     ],
                 ],
             },
@@ -331,6 +470,10 @@ bot.on('callback_query', async (ctx) => {
         case 'submit_answer_with_one_more':
             submit_answer_with_one_more(ctx)
             break;
+
+        case 'leaderboard':
+            leaderboard(ctx);
+            break;
         default:
             response = 'Invalid choice.';
     }
@@ -346,21 +489,26 @@ bot.command('cancel', async (ctx) => {
 
 
 bot.on('message', async (ctx) => {
+
+    const arabicString = `الجملة الخاصة بك كانت: ${currentTranslations[ctx.chat.id].sentence_text}
+\n وترجمتك كانت: \n ${ctx.message.text} \nهل ترغب في تقديم الإجابة؟ \n لإعادة كتابة الإجابة، ما عليك سوى كتابتها مجددًا `;
+
     if (currentTranslations[ctx.chat.id] != null) {
         currentTranslations[ctx.chat.id].sentence_translation = ctx.message.text
-        ctx.reply(`your sentence was  ${currentTranslations[ctx.chat.id].sentence_text}
-        \n and your tanslation was: \n ${ctx.message.text} \nyou want to submit the answer ? \n to rewrite the answer just type it again :cool:`, {
+        ctx.reply(arabicString, {
             reply_markup: {
                 inline_keyboard: [
-                   [
-                    { text: "Submit", callback_data: "submit_answer" },
-                    { text: "Submit & add one more", callback_data: "submit_answer_with_one_more" },
-                   ],
+                    [
+                        { text: "تقديم", callback_data: "submit_answer" },
+                        { text: "قدّم وأضف جملة أخرى", callback_data: "submit_answer_with_one_more" },
+                    ],
                 ]
             }
         })
     }
 })
+
+
 
 
 //////////////
