@@ -15,6 +15,7 @@ const { log, table } = require("console");
 const { brotliDecompress } = require("zlib");
 
 
+
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
 let db = new sqlite3.Database('./dbs/data.db');
@@ -88,7 +89,7 @@ const checkIfUserExist = (id, data) => {
             sql = `INSERT INTO users 
         VALUES (?, ?, ?, ?, ?, ?,?,?);`
 
-            db.run(sql, [data.id, data.first_name, data.last_name, data.username, data.is_bot,0,0,0], (res, err) => {
+            db.run(sql, [data.id, data.first_name, data.last_name, data.username, data.is_bot, 0, 0, 0], (res, err) => {
                 if (err) {
                     console.log(err);
                 }
@@ -129,7 +130,7 @@ const doaas = [
     'رَبَّنَا لاَ تُؤَاخِذْنَا إِن نَّسِينَا أَوْ أَخْطَأْنَا رَبَّنَا وَلاَ تَحْمِلْ عَلَيْنَا إِصْرًا كَمَا حَمَلْتَهُ عَلَى الَّذِينَ مِن قَبْلِنَا رَبَّنَا وَلاَ تُحَمِّلْنَا مَا لاَ طَاقَةَ لَنَا بِهِ وَاعْفُ عَنَّا وَاغْفِرْ لَنَا وَارْحَمْنَا أَنتَ مَوْلاَنَا فَانصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ',
     'أَصْلِحْ لِي فِي ذُرِّيَّتِي إِنِّي تُبْتُ إِلَيْكَ وَإِنِّي مِنَ الْمُسْلِمِينَ',
     'رَبَّنَا اغْفِرْ لِي وَلِوَالِدَيَّ وَلِلْمُؤْمِنِينَ يَوْمَ يَقُومُ الْحِسَابُ',
-    
+
     'شُكْرًا كَبِيرًا',
     'تَسْلَمْ',
     'مُتَشَكِّر',
@@ -147,6 +148,7 @@ const doaas = [
 
 
 bot.command("start", ctx => {
+    currentTranslations[ctx.chat.id] = null
     addUser(ctx.from)
     ctx.reply(`
     مرحبًا بك في بوت جمع البيانات باللهجة الجزائرية!
@@ -234,7 +236,7 @@ const getNumberOfTranslatedSentences = (ctx, id) => {
         //     if (rows[i].length == "medium") m++
         //     if (rows[i].length == "long") l++
         // }
-        
+
         ctx.reply('الرجاء اختيار طول الجملة الذي تفضله', {
             // Create an inline keyboard with choices
             reply_markup: {
@@ -242,9 +244,9 @@ const getNumberOfTranslatedSentences = (ctx, id) => {
                 inline_keyboard: [
 
                     [
-                        { text: 'قصيرة ' , callback_data: 't_short', },
-                        { text: 'متوسطة ' , callback_data: 't_medium' },
-                        { text: 'طويلة ' , callback_data: 't_long' },
+                        { text: 'قصيرة ', callback_data: 't_short', },
+                        { text: 'متوسطة ', callback_data: 't_medium' },
+                        { text: 'طويلة ', callback_data: 't_long' },
                     ],
                 ],
             },
@@ -334,32 +336,32 @@ const submit_answer = async (ctx) => {
 
     })
 
-     sql1 = "";
+    sql1 = "";
 
     switch (currentTranslations[ctx.chat.id].type) {
         case "short":
             sql1 = `UPDATE users
             SET short = short + 1
-            WHERE id = ?;` 
+            WHERE id = ?;`
             break;
-            case "medium":
+        case "medium":
             sql1 = `UPDATE users
             SET medium = medium + 1
-            WHERE id = ?;` 
+            WHERE id = ?;`
             break;
-            case "long":
+        case "long":
             sql1 = `UPDATE users
             SET long = long + 1
-            WHERE id = ?;` 
+            WHERE id = ?;`
             break;
-    
+
         default:
             break;
     }
 
 
-    db.run(sql1, [ctx.chat.id], (res,err)=>{
-        if(err) log(err)
+    db.run(sql1, [ctx.chat.id], (res, err) => {
+        if (err) log(err)
     })
 
     currentTranslations[ctx.chat.id] = null
@@ -384,20 +386,43 @@ const submit_answer = async (ctx) => {
 }
 
 
-const leaderboard = (ctx) => {
-    sql = "SELECT * FROM users ORDER BY long DESC, medium DESC, short DESC;"
-    db.all(sql,(err,res)=>{
-        console.log(res);
-        str = `----`
-        for(var i = 0 ; i < res.length ; i++)
-            str += `${res[i].first_name} || s:  ${res[i].short} || m: ${res[i].medium}  || l: ${res[i].long} \n ==== \n`
-        
-        ctx.reply(str)
-    
-        })
+const nevVersion = async (ctx) => {
+    if (ctx.chat.id != process.env.ADMIN_ID) return 
+    sql = "select id from users;"
+    const message = ctx.message.text.replace("/newV", "")
+    db.all(sql, (err, res) => {
+
+        for (var i = 0; i < res.length; i++) {
+           ctx.telegram.sendMessage(res[i]["id"], message )
+        }
+    })
+
 }
 
-bot.command("leaderboard", (ctx)=>{
+
+bot.command("newV", (ctx) => {
+    log("hello")
+    log(ctx.chat.id)
+    if (ctx.chat.id != process.env.ADMIN_ID) return
+    nevVersion(ctx)
+})
+
+
+
+const leaderboard = (ctx) => {
+    sql = "SELECT * FROM users ORDER BY long DESC, medium DESC, short DESC limit 10;"
+    db.all(sql, (err, res) => {
+        console.log(res);
+        str = `----`
+        for (var i = 0; i < res.length; i++)
+            str += `${res[i].first_name} || s:  ${res[i].short} || m: ${res[i].medium}  || l: ${res[i].long} \n ==== \n`
+
+        ctx.reply(str)
+
+    })
+}
+
+bot.command("leaderboard", (ctx) => {
     leaderboard(ctx)
 })
 
@@ -436,9 +461,9 @@ const submit_answer_with_one_more = async (ctx) => {
                 inline_keyboard: [
 
                     [
-                        { text: 'قصيرة ' , callback_data: 't_short', },
-                        { text: 'متوسطة ' , callback_data: 't_medium' },
-                        { text: 'طويلة ' , callback_data: 't_long' },
+                        { text: 'قصيرة ', callback_data: 't_short', },
+                        { text: 'متوسطة ', callback_data: 't_medium' },
+                        { text: 'طويلة ', callback_data: 't_long' },
                     ],
                 ],
             },
@@ -490,21 +515,25 @@ bot.command('cancel', async (ctx) => {
 
 bot.on('message', async (ctx) => {
 
-    const arabicString = `الجملة الخاصة بك كانت: ${currentTranslations[ctx.chat.id].sentence_text}
-\n وترجمتك كانت: \n ${ctx.message.text} \nهل ترغب في تقديم الإجابة؟ \n لإعادة كتابة الإجابة، ما عليك سوى كتابتها مجددًا `;
-
     if (currentTranslations[ctx.chat.id] != null) {
-        currentTranslations[ctx.chat.id].sentence_translation = ctx.message.text
-        ctx.reply(arabicString, {
-            reply_markup: {
-                inline_keyboard: [
-                    [
-                        { text: "تقديم", callback_data: "submit_answer" },
-                        { text: "قدّم وأضف جملة أخرى", callback_data: "submit_answer_with_one_more" },
-                    ],
-                ]
-            }
-        })
+        const arabicString = `الجملة الخاصة بك كانت: ${currentTranslations[ctx.chat.id].sentence_text}
+\n وترجمتك كانت: \n ${ctx.message.text}  \n لإعادة كتابة الإجابة، ما عليك سوى كتابتها مجددًا \n
+هل ترغب في تقديم إجابة أخرى؟
+`;
+
+        if (currentTranslations[ctx.chat.id] != null) {
+            currentTranslations[ctx.chat.id].sentence_translation = ctx.message.text
+            ctx.reply(arabicString, {
+                reply_markup: {
+                    inline_keyboard: [
+                        [
+                            { text: "لا", callback_data: "submit_answer" },
+                            { text: "نعم", callback_data: "submit_answer_with_one_more" },
+                        ],
+                    ]
+                }
+            })
+        }
     }
 })
 
