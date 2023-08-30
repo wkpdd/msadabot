@@ -8,11 +8,22 @@ app.use(express.static('static'))
 app.use(express.json());
 require('dotenv').config();
 
-const { Telegraf } = require('telegraf');
-const { type } = require("os");
-const { cursorTo } = require("readline");
-const { log, table } = require("console");
-const { brotliDecompress } = require("zlib");
+const {
+    Telegraf
+} = require('telegraf');
+const {
+    type
+} = require("os");
+const {
+    cursorTo
+} = require("readline");
+const {
+    log,
+    table
+} = require("console");
+const {
+    brotliDecompress
+} = require("zlib");
 
 
 
@@ -101,10 +112,37 @@ const checkIfUserExist = (id, data) => {
 }
 
 
+const calculatePoints = () => {
+    //fetch all users 
+    sql = `SELECT * FROM users`
+    db.all(sql, (err, res) => {
+        if (err) {
+            console.log(err);
+            return
+        }
+        for (var i = 0; i < res.length; i++) {
+            console.log(res[i]['id']);
+            id = res[i]['id']
+            medium = res[i]['medium'] * 2;
+            long = res[i]['long'] * 3;
+            short = res[i]['short'] * 1;
+            sql1 = `UPDATE users SET points = ? WHERE id = ?`
+            db.run(sql1, [medium + long + short, id], (err, res) => {
+                console.log(`done for ${id}`);
+            })
+        }
+    })
 
+}
 
 const addUser = (data) => {
-    const { first_name, last_name, username, id, is_bot } = data
+    const {
+        first_name,
+        last_name,
+        username,
+        id,
+        is_bot
+    } = data
     console.log(first_name, last_name, username, id, is_bot);
     checkIfUserExist(id, data)
 
@@ -172,8 +210,10 @@ bot.command("start", ctx => {
 
             inline_keyboard: [
 
-                [
-                    { text: 'إضغط هنا للبدأ ', callback_data: 'submit_answer_with_one_more', },
+                [{
+                        text: 'إضغط هنا للبدأ ',
+                        callback_data: 'submit_answer_with_one_more',
+                    },
 
                 ],
             ],
@@ -213,6 +253,7 @@ app.get("/startBot", (req, res) => {
 
 app.listen(3000, () => {
     console.log("Listening on 3000");
+    
     log(doaas.length)
 })
 
@@ -243,10 +284,18 @@ const getNumberOfTranslatedSentences = (ctx, id) => {
 
                 inline_keyboard: [
 
-                    [
-                        { text: 'قصيرة ', callback_data: 't_short', },
-                        { text: 'متوسطة ', callback_data: 't_medium' },
-                        { text: 'طويلة ', callback_data: 't_long' },
+                    [{
+                            text: 'قصيرة ',
+                            callback_data: 't_short',
+                        },
+                        {
+                            text: 'متوسطة ',
+                            callback_data: 't_medium'
+                        },
+                        {
+                            text: 'طويلة ',
+                            callback_data: 't_long'
+                        },
                     ],
                 ],
             },
@@ -315,6 +364,18 @@ const t_long = async (ctx) => {
 // of sentence that you want to translate
 // example: .... 
 
+bot.on("calculatePoints" , (ctx)=>{
+    if (ctx.chat.id != process.env.ADMIN_ID) return
+    calculatePoints()
+})
+
+
+bot.on("")
+
+
+
+
+bot.on("")
 
 
 
@@ -372,14 +433,16 @@ const submit_answer = async (ctx) => {
 
             inline_keyboard: [
 
-                [
-                    { text: 'أضف جملة أخرى  ', callback_data: 'submit_answer_with_one_more', },
-                ]
+                [{
+                    text: 'أضف جملة أخرى  ',
+                    callback_data: 'submit_answer_with_one_more',
+                }, ]
 
                 ,
-                [
-                    { text: 'قائمة  أكثر عشر أشخاص قامو بالترجمة ', callback_data: 'leaderboard', },
-                ]
+                [{
+                    text: 'قائمة  أكثر عشر أشخاص قامو بالترجمة ',
+                    callback_data: 'leaderboard',
+                }, ]
             ],
         },
     })
@@ -387,13 +450,13 @@ const submit_answer = async (ctx) => {
 
 
 const nevVersion = async (ctx) => {
-    if (ctx.chat.id != process.env.ADMIN_ID) return 
+    if (ctx.chat.id != process.env.ADMIN_ID) return
     sql = "select id from users;"
     const message = ctx.message.text.replace("/newV", "")
     db.all(sql, (err, res) => {
 
         for (var i = 0; i < res.length; i++) {
-           ctx.telegram.sendMessage(res[i]["id"], message )
+            ctx.telegram.sendMessage(res[i]["id"], message)
         }
     })
 
@@ -407,6 +470,15 @@ bot.command("newV", (ctx) => {
     nevVersion(ctx)
 })
 
+
+bot.command("execSQL", (ctx)=>{
+    if (ctx.chat.id != process.env.ADMIN_ID) return
+    let sql = ctx.message.text.replace("/execSQL", "")
+    console.log();
+    db.run(sql,(err,res)=>{
+        console.log(res);
+    })
+})
 
 
 const leaderboard = (ctx) => {
@@ -460,10 +532,18 @@ const submit_answer_with_one_more = async (ctx) => {
 
                 inline_keyboard: [
 
-                    [
-                        { text: 'قصيرة ', callback_data: 't_short', },
-                        { text: 'متوسطة ', callback_data: 't_medium' },
-                        { text: 'طويلة ', callback_data: 't_long' },
+                    [{
+                            text: 'قصيرة ',
+                            callback_data: 't_short',
+                        },
+                        {
+                            text: 'متوسطة ',
+                            callback_data: 't_medium'
+                        },
+                        {
+                            text: 'طويلة ',
+                            callback_data: 't_long'
+                        },
                     ],
                 ],
             },
@@ -526,9 +606,14 @@ bot.on('message', async (ctx) => {
             ctx.reply(arabicString, {
                 reply_markup: {
                     inline_keyboard: [
-                        [
-                            { text: "لا", callback_data: "submit_answer" },
-                            { text: "نعم", callback_data: "submit_answer_with_one_more" },
+                        [{
+                                text: "لا",
+                                callback_data: "submit_answer"
+                            },
+                            {
+                                text: "نعم",
+                                callback_data: "submit_answer_with_one_more"
+                            },
                         ],
                     ]
                 }
