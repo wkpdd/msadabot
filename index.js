@@ -112,12 +112,12 @@ const checkIfUserExist = (id, data) => {
 }
 
 
-const calculatePoints = () => {
+const calculatePoints = (ctx) => {
     //fetch all users 
     sql = `SELECT * FROM users`
     db.all(sql, (err, res) => {
         if (err) {
-            console.log(err);
+            ctx.reply(`${err}`);
             return
         }
         for (var i = 0; i < res.length; i++) {
@@ -128,7 +128,7 @@ const calculatePoints = () => {
             short = res[i]['short'] * 1;
             sql1 = `UPDATE users SET points = ? WHERE id = ?`
             db.run(sql1, [medium + long + short, id], (err, res) => {
-                console.log(`done for ${id}`);
+                ctx.reply(`done for ${id}, err: ${err}`);
             })
         }
     })
@@ -324,6 +324,8 @@ const t_short = async (ctx) => {
     })
 }
 
+
+
 const t_medium = async (ctx) => {
     sql = `SELECT * FROM sentences
     WHERE is_processed = 0 AND length='medium'
@@ -364,18 +366,12 @@ const t_long = async (ctx) => {
 // of sentence that you want to translate
 // example: .... 
 
-bot.on("calculatePoints" , (ctx)=>{
+bot.command("calculatePoints" , (ctx)=>{
     if (ctx.chat.id != process.env.ADMIN_ID) return
-    calculatePoints()
+    calculatePoints(ctx)
 })
 
 
-bot.on("")
-
-
-
-
-bot.on("")
 
 
 
@@ -402,17 +398,17 @@ const submit_answer = async (ctx) => {
     switch (currentTranslations[ctx.chat.id].type) {
         case "short":
             sql1 = `UPDATE users
-            SET short = short + 1
+            SET short = short + 1 , points=points+1 
             WHERE id = ?;`
             break;
         case "medium":
             sql1 = `UPDATE users
-            SET medium = medium + 1
+            SET medium = medium + 1 , points=points+2 
             WHERE id = ?;`
             break;
         case "long":
             sql1 = `UPDATE users
-            SET long = long + 1
+            SET long = long + 1 , points=points+3
             WHERE id = ?;`
             break;
 
@@ -463,11 +459,44 @@ const nevVersion = async (ctx) => {
 }
 
 
+const makeMeAnonymous = async (ctx) => {
+    let sql = `UPDATE users SET first_name = 'Anonymous', last_name = 'Anonymous' WHERE id = ?`
+    db.run(sql, [ctx.chat.id], (err,res)=>{
+        if(err){
+            ctx.reply("Error")
+            return
+        }
+        ctx.reply("Done")
+    })
+
+}
+
+const makeMeVisible = async (ctx) => {
+    let sql = `UPDATE users SET first_name = ?, last_name = ? WHERE id = ?`
+    db.run(sql, [ctx.chat.first_name, ctx.chat.last_name ,ctx.chat.id], (err,res)=>{
+        if(err){
+            ctx.reply("Error")
+            return
+        }
+        ctx.reply("Done")
+    })
+
+}
+
+
 bot.command("newV", (ctx) => {
     log("hello")
     log(ctx.chat.id)
     if (ctx.chat.id != process.env.ADMIN_ID) return
     nevVersion(ctx)
+})
+
+bot.command("makeMeAnonymous", (ctx) => {
+    makeMeAnonymous(ctx)
+})
+
+bot.command("makeMeVisible", (ctx) => {
+    makeMeVisible(ctx)
 })
 
 
@@ -476,18 +505,24 @@ bot.command("execSQL", (ctx)=>{
     let sql = ctx.message.text.replace("/execSQL", "")
     console.log();
     db.run(sql,(err,res)=>{
-        console.log(res);
+        ctx.reply(`res: ${res}`);
+        ctx.reply(`err: ${err}`);
     })
 })
 
 
 const leaderboard = (ctx) => {
-    sql = "SELECT * FROM users ORDER BY long DESC, medium DESC, short DESC limit 10;"
+    sql = "SELECT * FROM users ORDER BY points DESC limit 10;"
     db.all(sql, (err, res) => {
+        if(err){
+            ctx.reply(`Error   ${err}`)
+            return
+        }
+
         console.log(res);
         str = `----`
         for (var i = 0; i < res.length; i++)
-            str += `${res[i].first_name} || s:  ${res[i].short} || m: ${res[i].medium}  || l: ${res[i].long} \n ==== \n`
+            str += `${res[i].first_name} || points: ${res[i].points} \n ==== \n`
 
         ctx.reply(str)
 
