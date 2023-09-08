@@ -9,7 +9,8 @@ app.use(express.json());
 require('dotenv').config();
 
 const {
-    Telegraf
+    Telegraf,
+    Markup
 } = require('telegraf');
 const {
     type
@@ -253,7 +254,7 @@ app.get("/startBot", (req, res) => {
 
 app.listen(3000, () => {
     console.log("Listening on 3000");
-    
+
     log(doaas.length)
 })
 
@@ -320,7 +321,7 @@ const t_short = async (ctx) => {
             sentence_id: row.id,
         }
         console.log(currentTranslations);
-        ctx.reply(sentence_text)
+        ctx.reply(`  ترجم الجملة التالية: \n` + sentence_text)
     })
 }
 
@@ -366,7 +367,7 @@ const t_long = async (ctx) => {
 // of sentence that you want to translate
 // example: .... 
 
-bot.command("calculatePoints" , (ctx)=>{
+bot.command("calculatePoints", (ctx) => {
     if (ctx.chat.id != process.env.ADMIN_ID) return
     calculatePoints(ctx)
 })
@@ -375,7 +376,7 @@ bot.command("calculatePoints" , (ctx)=>{
 
 
 
-const submit_answer = async (ctx) => {
+const submit_answer = async (ctx, more) => {
     if (currentTranslations[ctx.chat.id] == null) return;
     console.log(currentTranslations[ctx.chat.id]);
     sql = `INSERT INTO sentence_translation (sentence_id, user_id, dialect_translation, length) VALUES (?,?,?,?);`
@@ -424,24 +425,13 @@ const submit_answer = async (ctx) => {
     currentTranslations[ctx.chat.id] = null
 
 
+
     ctx.reply(doaas[Math.floor(Math.random() * 31)] + "\n جزاك الله خيرا", {
-        reply_markup: {
 
-            inline_keyboard: [
-
-                [{
-                    text: 'أضف جملة أخرى  ',
-                    callback_data: 'submit_answer_with_one_more',
-                }, ]
-
-                ,
-                [{
-                    text: 'قائمة  أكثر عشر أشخاص قامو بالترجمة ',
-                    callback_data: 'leaderboard',
-                }, ]
-            ],
-        },
     })
+
+    if (!more)
+    sendMenu(ctx)
 }
 
 
@@ -461,24 +451,24 @@ const nevVersion = async (ctx) => {
 
 const makeMeAnonymous = async (ctx) => {
     let sql = `UPDATE users SET first_name = 'Anonymous', last_name = 'Anonymous' WHERE id = ?`
-    db.run(sql, [ctx.chat.id], (err,res)=>{
-        if(err){
-            ctx.reply("Error")
+    db.run(sql, [ctx.chat.id], (err, res) => {
+        if (err) {
+            ctx.reply("خطأ")
             return
         }
-        ctx.reply("Done")
+        ctx.reply("تم إخفاء الهوية")
     })
 
 }
 
 const makeMeVisible = async (ctx) => {
     let sql = `UPDATE users SET first_name = ?, last_name = ? WHERE id = ?`
-    db.run(sql, [ctx.chat.first_name, ctx.chat.last_name ,ctx.chat.id], (err,res)=>{
-        if(err){
-            ctx.reply("Error")
+    db.run(sql, [ctx.chat.first_name, ctx.chat.last_name, ctx.chat.id], (err, res) => {
+        if (err) {
+            ctx.reply("خطأ")
             return
         }
-        ctx.reply("Done")
+        ctx.reply("تم إظهار الهوية")
     })
 
 }
@@ -500,11 +490,11 @@ bot.command("makeMeVisible", (ctx) => {
 })
 
 
-bot.command("execSQL", (ctx)=>{
+bot.command("execSQL", (ctx) => {
     if (ctx.chat.id != process.env.ADMIN_ID) return
     let sql = ctx.message.text.replace("/execSQL", "")
     console.log();
-    db.run(sql,(err,res)=>{
+    db.run(sql, (err, res) => {
         ctx.reply(`res: ${res}`);
         ctx.reply(`err: ${err}`);
     })
@@ -514,7 +504,7 @@ bot.command("execSQL", (ctx)=>{
 const leaderboard = (ctx) => {
     sql = "SELECT * FROM users ORDER BY points DESC limit 10;"
     db.all(sql, (err, res) => {
-        if(err){
+        if (err) {
             ctx.reply(`Error   ${err}`)
             return
         }
@@ -544,7 +534,7 @@ bot.command('translate', (ctx) => {
 const submit_answer_with_one_more = async (ctx) => {
 
     if (currentTranslations[ctx.chat.id] != null)
-        submit_answer(ctx)
+        submit_answer(ctx, true)
 
     sql = "SELECT short,medium,long FROM users where id=?"
 
@@ -587,6 +577,7 @@ const submit_answer_with_one_more = async (ctx) => {
 }
 
 
+
 // Callback query handler for the inline choices
 bot.on('callback_query', async (ctx) => {
     const data = ctx.callbackQuery.data;
@@ -604,7 +595,7 @@ bot.on('callback_query', async (ctx) => {
             break;
 
         case 'submit_answer':
-            submit_answer(ctx)
+            submit_answer(ctx, false);
             break;
 
         case 'submit_answer_with_one_more':
@@ -625,6 +616,58 @@ bot.command('cancel', async (ctx) => {
     if (currentTranslations[ctx.chat.id] !== null) {
         currentTranslations[ctx.chat.id] = null
     }
+})
+
+
+const myMenu = {
+    translate: '✒️ ترجم جملة ✒️',
+    makeMeAnonymous: '🎩 قم بإخفاء معلوماتك من القائمة 🎩',
+
+    makeMeVisible: '👀 قم بإظهار معلوماتك في القائمة 👀',
+    leaderboard: '🥇 🥈 🥉 أكثر عشر أشخاص مساهمين 🥇 🥈 🥉',
+    cancel: ' ✒️ ترجم جملة',
+
+}
+
+bot.hears('✒️ ترجم جملة ✒️', (ctx) => {
+    let v = getNumberOfTranslatedSentences(ctx, ctx.chat.id)
+})
+
+
+bot.hears('🎩 قم بإخفاء معلوماتك من القائمة 🎩', (ctx) => makeMeAnonymous(ctx))
+
+bot.hears('👀 قم بإظهار معلوماتك في القائمة 👀', (ctx) => makeMeVisible(ctx))
+
+bot.hears('🥇 🥈 🥉 أكثر عشر أشخاص مساهمين 🥇 🥈 🥉', (ctx) => leaderboard(ctx))
+
+
+
+const sendMenu = async (ctx) => {
+    ctx.reply('القائمة', Markup
+        .keyboard([
+            [myMenu.translate],
+            [myMenu.makeMeAnonymous],
+            [myMenu.makeMeVisible], // Row1 with 2 buttons
+            [myMenu.leaderboard], // Row2 with 2 buttons
+            ['button 5', 'button 6', 'button 7'] // Row3 with 3 buttons
+        ])
+        .oneTime()
+        .resize()
+    )
+}
+
+bot.command('menu', async (ctx) => {
+    return await ctx.reply('القائمة', Markup
+        .keyboard([
+            [myMenu.translate],
+            [myMenu.makeMeAnonymous],
+            [myMenu.makeMeVisible], // Row1 with 2 buttons
+            [myMenu.leaderboard], // Row2 with 2 buttons
+            ['button 5', 'button 6', 'button 7'] // Row3 with 3 buttons
+        ])
+        .oneTime()
+        .resize()
+    )
 })
 
 
