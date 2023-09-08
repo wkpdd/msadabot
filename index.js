@@ -648,8 +648,7 @@ const sendMenu = async (ctx) => {
             [myMenu.translate],
             [myMenu.makeMeAnonymous],
             [myMenu.makeMeVisible], // Row1 with 2 buttons
-            [myMenu.leaderboard], // Row2 with 2 buttons
-            ['button 5', 'button 6', 'button 7'] // Row3 with 3 buttons
+            [myMenu.leaderboard]// Row3 with 3 buttons
         ])
         .oneTime()
         .resize()
@@ -662,8 +661,7 @@ bot.command('menu', async (ctx) => {
             [myMenu.translate],
             [myMenu.makeMeAnonymous],
             [myMenu.makeMeVisible], // Row1 with 2 buttons
-            [myMenu.leaderboard], // Row2 with 2 buttons
-            ['button 5', 'button 6', 'button 7'] // Row3 with 3 buttons
+            [myMenu.leaderboard]// Row3 with 3 buttons
         ])
         .oneTime()
         .resize()
